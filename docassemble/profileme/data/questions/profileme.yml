@@ -11,12 +11,21 @@ modules:
 ---
 mandatory: True
 code: |
-  menu_items = [action_menu_item(word('Update profileMe'), 'edit_profileMe')]
+  add_menu_item
+  export_file.initialize(filename="profileMe.json")  
+  profile.import_from_server()
+  demo_starting_screen #
 ---
-mandatory: True
+code: |
+  if defined('menu_items') and len(menu_items) > 0:
+    menu_items.append(action_menu_item(word('Update profileMe'), 'edit_profileMe'))
+  else:
+    menu_items = [action_menu_item(word('Update profileMe'), 'edit_profileMe')]    
+  add_menu_item = True
+---
 question: | 
   Example starting screen
-event: starting
+event: demo_starting_screen
 ---
 objects:
   - user: Individual
@@ -128,6 +137,7 @@ fields:
       - Step parent: step parent
       - Unmarried partner: unmarried partner
 ---
+need: updated_profile
 question: |
   Your profile
 subquestion: |
@@ -135,13 +145,13 @@ subquestion: |
   [FILE profileMe_transparent.png, 25%]
 
   ${action_button_html(str(export_file.url_for()), label='Download my data', icon="download")}
-  ${action_button_html(url_action('download'), label='Upload a data file')}
+  ${action_button_html(url_action('upload_profileme'), label='Upload a data file')}
 
   &nbsp; | &nbsp; | &nbsp;
   -------|--------|--------
   Name | ${user.name.full() if defined('user.name.first') else ''} | ${edit_link('user.name.first')}
   Alternate Name | ${showifdef('user.name.alternate')} | ${edit_link('user.name.alternate')}
-  Veteran | ${showifdef('user.is_veteran')} | ${edit_link('user.is_veteran')}
+  Veteran | ${yesno(user.is_veteran) if defined('user.is_veteran') else ''} | ${edit_link('user.is_veteran')}
   Language | ${showifdef('user.language')} | ${edit_link('user.language')}
   Date of Birth | ${showifdef('user.birthdate')} | ${edit_link('user.birthdate')}
 
@@ -152,14 +162,21 @@ subquestion: |
   ${household.add_action()}
 event: edit_profileMe
 ---
-mandatory: True
-code: |
-  export_file.initialize(filename="profileMe.json")
+question: |
+  Upload a Profile
+subquestion: |
+  If you have a saved profile from a different platform, you can upload it
+  on this form.
+fields:
+  - Upload a file: profile_upload
+    datatype: file
+continue button field: upload_profileme
 ---
 reconsider: True
 code: |
   profile.update(user, household)
   export_file.write(profile.as_json())
+  updated_profile = True
 ---
 code: | 
   # test
